@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InsightMapper - JSON Extractor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
+    .container { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .section { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h1 { font-size: 24px; margin-bottom: 20px; color: #333; grid-column: 1 / -1; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-weight: 500; margin-bottom: 6px; color: #555; }
+    input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 14px; }
+    textarea { resize: vertical; min-height: 100px; font-family: 'Courier New', monospace; }
+    button { padding: 10px 20px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; }
+    button:hover { background: #0052a3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .status { margin-top: 20px; padding: 12px; border-radius: 4px; display: none; }
+    .status.loading { background: #e3f2fd; color: #1976d2; display: block; }
+    .status.error { background: #ffebee; color: #c62828; display: block; }
+    .status.success { background: #e8f5e9; color: #2e7d32; display: block; }
+    .output-header { font-weight: 600; color: #333; margin-bottom: 8px; }
+    #result { background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; max-height: 600px; overflow-y: auto; display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>InsightMapper - JSON Extractor</h1>
+    
+    <div class="section">
+      <h2 style="font-size: 18px; margin-bottom: 16px; color: #333;">Input</h2>
+      <form id="extractForm">
+        <div class="form-group">
+          <label for="docType">Document Type</label>
+          <input type="text" id="docType" name="document_type" placeholder="e.g., customer support email" value="customer support email" required>
+        </div>
+        <div class="form-group">
+          <label for="schema">JSON Schema (as JSON string)</label>
+          <textarea id="schema" name="json_schema" placeholder='{"field1": "string", "field2": "string"}' required>{"sender": "string", "issue": "string", "priority": "string"}</textarea>
+        </div>
+        <div class="form-group">
+          <label for="input">Unstructured Text</label>
+          <textarea id="input" name="input" placeholder="Paste the unstructured text here..." required>Hi support team - I'm Bob from TechCorp. My account is locked and I can't access anything. This is critical - I have a demo tomorrow!</textarea>
+        </div>
+        <button type="submit">Extract JSON</button>
+      </form>
+      
+      <div id="status" class="status"></div>
+    </div>
+
+    <div class="section">
+      <h2 style="font-size: 18px; margin-bottom: 16px; color: #333;">Response</h2>
+      <div class="output-header" style="display: none;" id="responseHeader">Extracted JSON:</div>
+      <div id="result"></div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('extractForm');
+    const statusDiv = document.getElementById('status');
+    const resultDiv = document.getElementById('result');
+    const responseHeader = document.getElementById('responseHeader');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const payload = {
+        document_type: document.getElementById('docType').value,
+        json_schema: document.getElementById('schema').value,
+        input: document.getElementById('input').value
+      };
+
+      statusDiv.textContent = 'Loading...';
+      statusDiv.className = 'status loading';
+      resultDiv.style.display = 'none';
+      responseHeader.style.display = 'none';
+
+      try {
+        const response = await fetch('http://localhost:3000/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP ${response.status}`);
+        }
+
+        statusDiv.textContent = '✓ Successfully extracted JSON';
+        statusDiv.className = 'status success';
+        resultDiv.textContent = JSON.stringify(data, null, 2);
+        resultDiv.style.display = 'block';
+        responseHeader.style.display = 'block';
+      } catch (err) {
+        statusDiv.textContent = `✗ Error: ${err.message}`;
+        statusDiv.className = 'status error';
+        resultDiv.style.display = 'none';
+        responseHeader.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
